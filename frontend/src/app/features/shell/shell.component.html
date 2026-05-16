@@ -1,0 +1,617 @@
+<main class="wa-shell" [class.has-selection]="!!selectedRoom()">
+
+  <!-- ═══════════════════════════  SIDEBAR  ═══════════════════════════════ -->
+  <aside class="wa-sidebar">
+    <header class="wa-sidebar-top">
+      <div class="wa-brand">
+        <!-- My avatar — click to change profile photo -->
+        <div class="wa-avatar small my-avatar-wrap" title="Change profile photo" (click)="myAvatarInput.click()">
+          @if (myAvatarUrl()) {
+            <img [src]="myAvatarUrl()" alt="My avatar" class="avatar-img">
+          } @else {
+            {{ user()?.name?.slice(0,2)?.toUpperCase() ?? 'ME' }}
+          }
+          @if (avatarUploading()) {
+            <div class="avatar-uploading-overlay"><span class="spinner-sm"></span></div>
+          } @else {
+            <div class="avatar-edit-overlay"><span class="material-icons">photo_camera</span></div>
+          }
+        </div>
+        <input #myAvatarInput type="file" accept="image/*" style="display:none" (change)="uploadMyAvatar($event)">
+        <div class="wa-brand-copy">
+          <strong>{{ user()?.name ?? 'Guest' }}</strong>
+        </div>
+      </div>
+
+      <div class="wa-top-actions">
+        <button
+          class="icon-button"
+          type="button"
+          [title]="theme() === 'light' ? 'Switch to dark mode' : 'Switch to light mode'"
+          (click)="toggleTheme()">
+          <span class="material-icons">{{ theme() === 'light' ? 'dark_mode' : 'light_mode' }}</span>
+        </button>
+        <div class="notif-wrap" (click)="$event.stopPropagation()">
+          <button class="icon-button notif-btn" type="button" title="Notifications"
+            (click)="toggleNotifPanel()">
+            <span class="material-icons">notifications</span>
+            @if (totalUnreadMessages() > 0 || unreadNotificationCount() > 0) {
+              <span class="notif-badge">{{ totalUnreadMessages() || unreadNotificationCount() }}</span>
+            }
+          </button>
+        </div>
+
+        @if (notifPanelOpen()) {
+          <div class="notif-overlay" (click)="closeNotifPanel()"></div>
+          <div class="notif-dropdown" (click)="$event.stopPropagation()">
+            <div class="notif-dropdown-header">
+              <div class="notif-header-title">
+                <span class="material-icons notif-header-icon">notifications</span>
+                <span>Notifications</span>
+                @if (totalUnreadMessages() > 0) {
+                  <span class="notif-count-pill">{{ totalUnreadMessages() }} unread</span>
+                }
+              </div>
+              <button type="button" class="notif-mark-read"
+                (click)="markNotificationsRead(); closeNotifPanel()">
+                Mark all read
+              </button>
+            </div>
+            <div class="notif-list">
+
+              <!-- ── Unread message rooms (live, clears when room is opened) ── -->
+              @if (unreadRooms().length > 0) {
+                <div class="notif-section-label">
+                  <span class="material-icons">chat_bubble</span>
+                  Unread Messages
+                </div>
+                @for (entry of unreadRooms(); track entry.room.id) {
+                  <button class="notif-item unread notif-item-btn" type="button"
+                    (click)="goToRoom(entry.room)">
+                    <div class="notif-item-icon msg-icon">
+                      <span class="wa-avatar small notif-avatar">{{ roomAvatar(entry.room) }}</span>
+                    </div>
+                    <div class="notif-item-body">
+                      <strong>{{ roomDisplayName(entry.room) }}</strong>
+                      <span>{{ entry.count }} new message{{ entry.count > 1 ? 's' : '' }}</span>
+                    </div>
+                    <span class="notif-msg-badge">{{ entry.count > 99 ? '99+' : entry.count }}</span>
+                  </button>
+                }
+              }
+
+              <!-- ── Backend notifications ── -->
+              @if (notifications().length > 0) {
+                @if (unreadRooms().length > 0) {
+                  <div class="notif-section-label">
+                    <span class="material-icons">info</span>
+                    Activity
+                  </div>
+                }
+                @for (notif of notifications(); track notif.id) {
+                  <div class="notif-item" [class.unread]="!notif.read">
+                    <div class="notif-item-icon">
+                      <span class="material-icons">
+                        {{ notif.read ? 'notifications_none' : 'notifications_active' }}
+                      </span>
+                    </div>
+                    <div class="notif-item-body">
+                      <strong>{{ notif.title }}</strong>
+                      <span>{{ notif.body }}</span>
+                      <small>{{ notif.createdAt | date:'short' }}</small>
+                    </div>
+                    @if (!notif.read) {
+                      <div class="notif-unread-dot"></div>
+                    }
+                  </div>
+                }
+              }
+
+              <!-- ── Empty state ── -->
+              @if (!hasAnyNotifications()) {
+                <div class="notif-empty">
+                  <span class="material-icons">notifications_none</span>
+                  <p>No notifications yet</p>
+                </div>
+              }
+
+            </div>
+          </div>
+        }
+        <button class="icon-button" type="button" title="New Group" (click)="openComposer('group')">
+          <span class="material-icons">group_add</span>
+        </button>
+        <button class="icon-button" type="button" title="New Chat" (click)="openComposer('dm')">
+          <span class="material-icons">chat</span>
+        </button>
+        <button class="icon-button" type="button" title="Logout" (click)="logout()">
+          <span class="material-icons">logout</span>
+        </button>
+      </div>
+    </header>
+
+    <div class="wa-search-container">
+      <label class="wa-search">
+        <span class="material-icons wa-search-icon">search</span>
+        <input [ngModel]="searchText()" (ngModelChange)="searchText.set($event)" placeholder="Search or start new chat">
+      </label>
+    </div>
+
+    <!-- Group Composer -->
+    @if (composerMode() === 'group') {
+      <section class="wa-inline-composer slide-in">
+        <div class="wa-panel-header">
+          <button class="icon-button back" type="button" title="Back" (click)="closeComposer()">
+            <span class="material-icons">arrow_back</span>
+          </button>
+          <h3>Add group subject</h3>
+        </div>
+        <div class="wa-composer-body">
+          <input [(ngModel)]="roomName" placeholder="Group Subject">
+          <button class="primary-fab" type="button" (click)="createRoom()">
+            <span class="material-icons">check</span>
+          </button>
+        </div>
+      </section>
+    }
+
+    <!-- DM Composer -->
+    @if (composerMode() === 'dm') {
+      <section class="wa-inline-composer slide-in">
+        <div class="wa-panel-header">
+          <button class="icon-button back" type="button" title="Back" (click)="closeComposer()">
+            <span class="material-icons">arrow_back</span>
+          </button>
+          <h3>New chat</h3>
+        </div>
+
+        <div class="wa-composer-body">
+          <input
+            [ngModel]="directSearchQuery"
+            (ngModelChange)="onDirectSearchQueryChange($event)"
+            placeholder="Search email or name">
+
+          @if (selectedDirectContact()) {
+            <div class="wa-selected-contact">
+              <div class="wa-avatar small">{{ selectedDirectContact()?.name?.slice(0, 2)?.toUpperCase() }}</div>
+              <div class="contact-info">
+                <strong>{{ selectedDirectContact()?.name }}</strong>
+                <span>{{ selectedDirectContact()?.email }}</span>
+              </div>
+            </div>
+            <button class="primary-fab" type="button" (click)="createDirectRoom()">
+              <span class="material-icons">chat</span>
+            </button>
+          }
+
+          @if (directSearchResults().length > 0) {
+            <div class="wa-contact-results">
+              @for (contact of directSearchResults(); track contact.id) {
+                <button class="wa-contact-result" type="button" (click)="chooseDirectContact(contact)">
+                  <div class="wa-avatar small">{{ contact.name.slice(0, 2).toUpperCase() }}</div>
+                  <div class="wa-contact-copy">
+                    <strong>{{ contact.name }}</strong>
+                    <span>{{ contact.email }}</span>
+                  </div>
+                </button>
+              }
+            </div>
+          }
+        </div>
+      </section>
+    }
+
+    <!-- Chat List -->
+    <section class="wa-chat-list">
+      @for (room of filteredRooms(); track room.id) {
+        <button class="wa-chat-row" type="button" [class.active]="selectedRoom()?.id === room.id" (click)="selectRoom(room)">
+          <div class="wa-avatar">
+            @if (room.type === 'DIRECT' && getUserAvatarUrl(getOtherMemberId(room) ?? '')) {
+              <img [src]="getUserAvatarUrl(getOtherMemberId(room) ?? '')" alt="" class="avatar-img">
+            } @else {
+              {{ roomAvatar(room) }}
+            }
+          </div>
+          <div class="wa-chat-copy">
+            <div class="wa-chat-line">
+              <strong>{{ roomDisplayName(room) }}</strong>
+              <small>{{ room.createdAt | date:'shortTime' }}</small>
+            </div>
+            <div class="wa-chat-row-bottom">
+              <span class="wa-chat-secondary">{{ roomSecondaryText(room) }}</span>
+              @if (getUnreadCount(room.id) > 0) {
+                <span class="wa-unread-badge">{{ getUnreadCount(room.id) > 99 ? '99+' : getUnreadCount(room.id) }}</span>
+              }
+            </div>
+          </div>
+        </button>
+      } @empty {
+        <div class="empty-state">
+          <span class="material-icons empty-icon">chat_bubble_outline</span>
+          <p>No chats yet. Start a new conversation.</p>
+        </div>
+      }
+    </section>
+  </aside>
+
+  <!-- ═══════════════════════════  CONVERSATION  ══════════════════════════ -->
+  <section class="wa-conversation">
+    @if (!selectedRoom()) {
+      <div class="wa-placeholder">
+        <svg class="placeholder-img" width="320" height="200" viewBox="0 0 320 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="160" cy="100" r="80" fill="var(--wa-primary)" opacity="0.08"/>
+          <rect x="80" y="60" width="120" height="80" rx="4" fill="var(--wa-panel-background)" stroke="var(--wa-text-secondary)" stroke-width="3"/>
+          <rect x="50" y="140" width="180" height="10" rx="3" fill="var(--wa-text-secondary)"/>
+          <rect x="90" y="70" width="100" height="60" rx="2" fill="var(--wa-search-bg)"/>
+          <rect x="190" y="80" width="50" height="90" rx="6" fill="var(--wa-panel-background)" stroke="var(--wa-primary)" stroke-width="3"/>
+          <rect x="195" y="85" width="40" height="70" rx="2" fill="var(--wa-message-out)"/>
+          <path d="M120 90H150C152.209 90 154 91.7909 154 94V104C154 106.209 152.209 108 150 108H140L120 114V90Z" fill="var(--wa-primary)"/>
+          <path d="M225 105H205C202.791 105 201 106.791 201 109V119C201 121.209 202.791 123 205 123H215L225 129V105Z" fill="var(--wa-primary)"/>
+        </svg>
+        <h2>NexTalk Web</h2>
+        <p>Send and receive messages without keeping your phone online.</p>
+      </div>
+    } @else {
+      <!-- Conversation Header -->
+      <header class="wa-conversation-header" (click)="toggleInfoPanel()">
+        <div class="wa-conversation-meta">
+          <button class="icon-button wa-back-button" type="button" title="Back to chats" (click)="clearSelectedRoom(); $event.stopPropagation()">
+            <span class="material-icons">arrow_back</span>
+          </button>
+          <div class="wa-avatar">
+            @if (selectedRoom()?.type === 'DIRECT' && getUserAvatarUrl(selectedDirectMemberId() ?? '')) {
+              <img [src]="getUserAvatarUrl(selectedDirectMemberId() ?? '')" alt="" class="avatar-img">
+            } @else {
+              {{ selectedRoomAvatar() }}
+            }
+          </div>
+          <div class="wa-conversation-titles">
+            <h2>{{ selectedRoomTitle() }}</h2>
+            <p>{{ selectedRoomSubtitle() }}</p>
+          </div>
+        </div>
+
+        <div class="wa-conversation-actions">
+          <button class="icon-button" type="button" title="More options">
+            <span class="material-icons">more_vert</span>
+          </button>
+        </div>
+      </header>
+
+      @if (error()) {
+        <div class="wa-banner error">{{ error() }}</div>
+      }
+
+      @if (isSelectedRoomBlocked()) {
+        <div class="wa-banner blocked">You blocked this contact. Tap to unblock.</div>
+      }
+
+      <!-- Messages Area -->
+      <div class="wa-messages" #scrollContainer>
+        @for (message of messages(); track message.id) {
+          <article class="wa-message" [class.mine]="messageIsMine(message)">
+            <div class="wa-message-bubble" [class.has-reactions]="message.reactions && message.reactions.length > 0">
+
+              @if (selectedRoom()?.type === 'GROUP' && !messageIsMine(message)) {
+                <span class="msg-sender-name">{{ getSenderName(message) }}</span>
+              }
+
+              @if (message.deleted) {
+                <!-- Deleted message — always show text regardless of original type -->
+                <p class="deleted-msg">This message was deleted</p>
+              } @else if (message.type === 'MEDIA') {
+                @if (!imageFailedUrls().has(message.content)) {
+                  <!-- Try to render as image/video; onerror falls back to doc card -->
+                  <div class="wa-media-wrapper">
+                    <img
+                      [src]="apiBaseUrl + message.content"
+                      class="wa-message-media"
+                      alt="Image"
+                      loading="lazy"
+                      (error)="markImageFailed(message.content)">
+                  </div>
+                } @else {
+                  <!-- Not an image — render as downloadable document card -->
+                  <a class="wa-doc-bubble" [href]="apiBaseUrl + message.content" target="_blank" rel="noopener">
+                    <span class="material-icons wa-doc-icon">insert_drive_file</span>
+                    <span class="wa-doc-name">{{ getFileName(message.content) }}</span>
+                    <span class="material-icons wa-doc-download">download</span>
+                  </a>
+                }
+              } @else {
+                <p>{{ message.content }}</p>
+              }
+
+              @if (message.reactions && message.reactions.length > 0) {
+                <div class="wa-reactions">
+                  <span>❤️</span>
+                  @if (message.reactions.length > 1) {
+                    <span class="count">{{ message.reactions.length }}</span>
+                  }
+                </div>
+              }
+
+              <footer>
+                <span class="msg-time">{{ message.createdAt | date:'shortTime' }}</span>
+                @if (messageIsMine(message)) {
+                  <span class="material-icons read-receipt">done_all</span>
+                }
+              </footer>
+            </div>
+
+            <!-- Message actions (hover) -->
+            <div class="wa-message-actions">
+              <button type="button" title="Like message" (click)="toggleLike(message)" [class.active]="hasUserLiked(message)">
+                <span class="material-icons" [style.color]="hasUserLiked(message) ? '#e91e63' : 'inherit'">
+                  {{ hasUserLiked(message) ? 'favorite' : 'favorite_border' }}
+                </span>
+              </button>
+              <button type="button" title="Delete message" (click)="deleteMessage(message)">
+                <span class="material-icons">delete</span>
+              </button>
+            </div>
+          </article>
+        } @empty {
+          <div class="wa-encryption-notice">
+            <span class="material-icons">lock</span>
+            <p>Messages are end-to-end encrypted. No one outside of this chat, not even NexTalk, can read or listen to them.</p>
+          </div>
+        }
+      </div>
+
+      <!-- Composer -->
+      <form class="wa-composer" (ngSubmit)="sendMessage()">
+
+        <!-- Hidden file inputs -->
+        <input
+          type="file"
+          #photoInput
+          id="photoInput"
+          accept="image/*,video/*"
+          style="display:none"
+          (change)="onFileSelected($event)">
+
+        <div class="wa-attachment-wrap">
+          <button class="icon-button" type="button" title="Attach" (click)="toggleAttachmentMenu()">
+            <span class="material-icons">attach_file</span>
+          </button>
+
+          @if (attachmentMenuOpen()) {
+            <div class="wa-attachment-menu">
+              <button type="button" class="wa-attachment-item" (click)="photoInput.click(); closeAttachmentMenu()">
+                <div class="icon-circle photo"><span class="material-icons">photo_library</span></div>
+                <span>Photos &amp; Videos</span>
+              </button>
+              <button type="button" class="wa-attachment-item" (click)="openCamera()">
+                <div class="icon-circle camera"><span class="material-icons">camera_alt</span></div>
+                <span>Camera</span>
+              </button>
+            </div>
+          }
+        </div>
+
+        <div class="wa-composer-box">
+          <input
+            type="text"
+            [(ngModel)]="messageText"
+            name="messageText"
+            [disabled]="isSelectedRoomBlocked()"
+            placeholder="Type a message"
+            (input)="sendTyping()"
+            autocomplete="off">
+        </div>
+        <button class="icon-button send-btn" type="submit" [disabled]="!messageText.trim() || isSelectedRoomBlocked()">
+          <span class="material-icons">send</span>
+        </button>
+      </form>
+    }
+  </section>
+
+  <!-- ═══════════════════════════  INFO PANEL  ════════════════════════════ -->
+  <aside class="wa-info-panel" [class.open]="infoPanelOpen()">
+    <div class="wa-info-header">
+      <button class="icon-button" type="button" title="Close" (click)="toggleInfoPanel()">
+        <span class="material-icons">close</span>
+      </button>
+      <h3>Contact info</h3>
+    </div>
+
+    <div class="wa-info-content">
+      <section class="wa-card compact center">
+        <div class="wa-avatar extra-large">
+          @if (selectedRoom()?.type === 'DIRECT' && getUserAvatarUrl(selectedDirectMemberId() ?? '')) {
+            <img [src]="getUserAvatarUrl(selectedDirectMemberId() ?? '')" alt="" class="avatar-img">
+          } @else if (selectedRoom()?.type === 'GROUP' && getRoomAvatarUrl(selectedRoom()!)) {
+            <img [src]="getRoomAvatarUrl(selectedRoom()!)" alt="" class="avatar-img">
+          } @else {
+            {{ selectedRoomAvatar() }}
+          }
+          
+          <!-- Admin Group Avatar Upload -->
+          @if (selectedRoom()?.type === 'GROUP' && isCurrentUserGroupAdmin()) {
+            <button class="avatar-edit-btn" title="Change group photo" (click)="groupAvatarInput.click()" [disabled]="avatarUploading()">
+              <span class="material-icons">{{ avatarUploading() ? 'hourglass_empty' : 'photo_camera' }}</span>
+            </button>
+            <input #groupAvatarInput type="file" accept="image/*" style="display:none" (change)="uploadGroupAvatar($event)">
+          }
+        </div>
+        <h2>{{ selectedRoomTitle() }}</h2>
+        <p>{{ selectedRoomMeta() }}</p>
+      </section>
+
+      @if (selectedRoom()?.type === 'DIRECT') {
+        <section class="wa-card compact action-card">
+          @if (!isSelectedRoomBlocked()) {
+            <button class="danger-action" type="button" (click)="blockSelectedContact()">
+              <span class="material-icons">block</span> Block {{ selectedRoomTitle() }}
+            </button>
+          } @else {
+            <button class="action-btn" type="button" (click)="unblockSelectedContact()">
+              <span class="material-icons">how_to_reg</span> Unblock {{ selectedRoomTitle() }}
+            </button>
+          }
+          <button class="danger-action" type="button" (click)="deleteCurrentChat()">
+            <span class="material-icons">delete</span> Delete chat
+          </button>
+        </section>
+      }
+
+      @if (selectedRoom()?.type === 'GROUP') {
+
+        <!-- ── Members list ──────────────────────────── -->
+        <section class="wa-card compact">
+          <div class="wa-panel-subheader">
+            <p>Members ({{ selectedRoom()!.members.length }})</p>
+          </div>
+          <ul class="wa-member-list">
+            @for (member of selectedRoom()!.members; track member.id) {
+              <li class="wa-member-row">
+                <div class="wa-avatar small">
+                  @if (getUserAvatarUrl(member.userId)) {
+                    <img [src]="getUserAvatarUrl(member.userId)" alt="" class="avatar-img">
+                  } @else {
+                    {{ (contactDirectory()[member.userId] ? contactDirectory()[member.userId].name : '??').slice(0,2).toUpperCase() }}
+                  }
+                </div>
+                <div class="wa-member-info">
+                  <strong>
+                    @if (member.userId === user()?.id) {
+                      You
+                    } @else {
+                      {{ contactDirectory()[member.userId] ? contactDirectory()[member.userId].name : (member.userId.slice(0,8) + '…') }}
+                    }
+                  </strong>
+                  @if (member.role === 'OWNER') {
+                    <span class="wa-admin-badge">
+                      <span class="material-icons">workspace_premium</span> Admin
+                    </span>
+                  }
+                </div>
+                <!-- Admin can remove non-admin members (but not themselves) -->
+                @if (isCurrentUserGroupAdmin() && member.role !== 'OWNER' && member.userId !== user()?.id) {
+                  <button
+                    class="wa-remove-member-btn"
+                    type="button"
+                    title="Remove member"
+                    (click)="removeMemberFromGroup(member.userId)">
+                    <span class="material-icons">person_remove</span>
+                  </button>
+                }
+              </li>
+            }
+          </ul>
+        </section>
+
+        <!-- ── Add member (admin only) ───────────────── -->
+        @if (isCurrentUserGroupAdmin()) {
+          <section class="wa-card compact">
+            <div class="wa-panel-subheader">
+              <p>Add member to {{ selectedRoomTitle() }}</p>
+            </div>
+
+            <div class="wa-composer-body">
+              <input
+                [ngModel]="groupSearchQuery"
+                (ngModelChange)="onGroupSearchQueryChange($event)"
+                placeholder="Search email or name">
+
+              @if (selectedGroupContact()) {
+                <div class="wa-selected-contact">
+                  <div class="wa-avatar small">{{ selectedGroupContact()?.name?.slice(0, 2)?.toUpperCase() }}</div>
+                  <div class="contact-info">
+                    <strong>{{ selectedGroupContact()?.name }}</strong>
+                    <span>{{ selectedGroupContact()?.email }}</span>
+                  </div>
+                </div>
+                <button class="action-btn" type="button" (click)="addMember()">Add Member</button>
+              }
+
+              @if (groupSearchResults().length > 0) {
+                <div class="wa-contact-results inline">
+                  @for (contact of groupSearchResults(); track contact.id) {
+                    <button class="wa-contact-result" type="button" (click)="chooseGroupContact(contact)">
+                      <div class="wa-avatar small">{{ contact.name.slice(0, 2).toUpperCase() }}</div>
+                      <div class="wa-contact-copy">
+                        <strong>{{ contact.name }}</strong>
+                        <span>{{ contact.email }}</span>
+                      </div>
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+          </section>
+        }
+
+        <!-- ── Exit group (all members) ─────────────── -->
+        <section class="wa-card compact action-card">
+          <button class="danger-action" type="button" (click)="deleteCurrentChat()">
+            <span class="material-icons">exit_to_app</span> Exit group
+          </button>
+        </section>
+      }
+    </div>
+  </aside>
+</main>
+
+<!-- ═══════════════════════════  DELETE CONFIRMATION MODAL  ════════════════ -->
+@if (pendingDeleteMessage()) {
+  <div class="delete-modal-backdrop" (click)="cancelDelete()"></div>
+  <div class="delete-modal" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
+    <div class="delete-modal-icon">
+      <span class="material-icons">delete_forever</span>
+    </div>
+    <h3 id="delete-modal-title">Delete Message?</h3>
+    <p>Are you sure you want to delete this message? This action cannot be undone.</p>
+    <div class="delete-modal-actions">
+      <button class="modal-btn cancel" type="button" (click)="cancelDelete()">
+        <span class="material-icons">close</span>
+        Cancel
+      </button>
+      <button class="modal-btn confirm" type="button" (click)="confirmDelete()">
+        <span class="material-icons">delete</span>
+        Yes, Delete
+      </button>
+    </div>
+  </div>
+}
+
+<!-- ═══════════════════════════  CAMERA MODAL  ══════════════════════════════ -->
+@if (cameraModalOpen()) {
+  <div class="camera-modal-backdrop" (click)="closeCameraModal()"></div>
+  <div class="camera-modal" role="dialog" aria-modal="true">
+    <div class="camera-modal-header">
+      <span class="material-icons camera-modal-icon-label">camera_alt</span>
+      <span>Take a Photo</span>
+      <button type="button" class="icon-button camera-close-btn" (click)="closeCameraModal()">
+        <span class="material-icons">close</span>
+      </button>
+    </div>
+    <div class="camera-preview-wrap">
+      <video id="camera-preview" class="camera-video" autoplay playsinline muted></video>
+    </div>
+    <div class="camera-modal-actions">
+      <button type="button" class="camera-capture-btn" (click)="capturePhoto()">
+        <span class="material-icons">camera</span>
+      </button>
+    </div>
+  </div>
+}
+
+<!-- ═══════════════════════════  TOAST NOTIFICATIONS  ══════════════════════ -->
+<div class="wa-toast-container" aria-live="polite">
+  @for (toast of toasts(); track toast.id) {
+    <div class="wa-toast" (click)="dismissToast(toast.id)">
+      <div class="wa-toast-icon">
+        <span class="material-icons">chat_bubble</span>
+      </div>
+      <div class="wa-toast-body">
+        <strong>{{ toast.title }}</strong>
+        <span>{{ toast.body }}</span>
+      </div>
+      <button class="wa-toast-close" type="button" (click)="dismissToast(toast.id); $event.stopPropagation()">
+        <span class="material-icons">close</span>
+      </button>
+    </div>
+  }
+</div>
