@@ -1,0 +1,111 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
+
+
+/* ═══ LIGHT THEME ═══ */
+:root {
+  --accent: #128c7e;
+  --accent-2: #075e54;
+  --accent-hover: #0f7c6b;
+  --accent-glow: rgba(18,140,126,0.14);
+  --accent-border: rgba(18,140,126,0.28);
+  --accent-soft: #e8f8f5;
+  --accent-soft-2: #d1f0eb;
+  --app-bg: #f0f2f5;
+  --sidebar-bg: #ffffff;
+  --conv-bg: #efeae2;
+  --header-bg: rgba(255,255,255,0.92);
+  --card-bg: #ffffff;
+  --input-bg: #f0f2f5;
+  --btn-bg: #f0f2f5;
+  --border: #e2e8f0;
+  --border-2: rgba(0,0,0,0.06);
+  --text-primary: #111b21;
+  --text-muted: #667781;
+  --text-subtle: #9ca3af;
+  --tabs-bg: #f0f2f5;
+  --tab-active-bg: #ffffff;
+  --hover-bg: #f0f2f5;
+  --hover-row: #f5f7f9;
+  --active-row: #d9fdd3;
+  --bubble-bg: #ffffff;
+  --bubble-border: #e2e8f0;
+  --bubble-mine-bg: #d9fdd3;
+  --bubble-mine-border: #b8e9b8;
+}
+
+/* ═══ DARK THEME ═══ */
+body[data-theme='dark'] {
+  --accent: #25d366;
+  --accent-2: #1ebe5a;
+  --accent-hover: #1ebe5a;
+  --accent-glow: rgba(37,211,102,0.14);
+  --accent-border: rgba(37,211,102,0.28);
+  --accent-soft: #162f23;
+  --accent-soft-2: #1a3828;
+  --app-bg: #0b141a;
+  --sidebar-bg: #111b21;
+  --conv-bg: #0b141a;
+  --header-bg: rgba(17,27,33,0.95);
+  --card-bg: #1f2c34;
+  --input-bg: #1f2c34;
+  --btn-bg: #1f2c34;
+  --border: #2a3942;
+  --border-2: rgba(255,255,255,0.04);
+  --text-primary: #e9edef;
+  --text-muted: #8696a0;
+  --text-subtle: #52525b;
+  --tabs-bg: #1f2c34;
+  --tab-active-bg: #111b21;
+  --hover-bg: #2a3942;
+  --hover-row: #1a2a32;
+  --active-row: rgba(37,211,102,0.12);
+  --bubble-bg: #202c33;
+  --bubble-border: #2a3942;
+  --bubble-mine-bg: #005c4b;
+  --bubble-mine-border: #0d6b58;
+}
+
+/* ═══ RESET ═══ */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', 'Segoe UI', system-ui, sans-serif;
+  background: var(--app-bg);
+  color: var(--text-primary);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+button, input, textarea, select {
+  font: inherit;
+  cursor: pointer;
+}
+
+input, textarea {
+  cursor: text;
+}
+
+a { color: inherit; }
+
+/* ═══ SCROLLBAR ═══ */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+}
+
+@media (max-width: 860px) {
+  .wa-back-button { display: flex !important; }
+}

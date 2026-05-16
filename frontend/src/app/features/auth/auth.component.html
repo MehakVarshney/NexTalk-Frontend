@@ -1,0 +1,329 @@
+<main class="auth-page modern-theme">
+  <!-- Animated ambient blobs -->
+  <div class="ambient-background">
+    <div class="shape shape-1"></div>
+    <div class="shape shape-2"></div>
+    <div class="shape shape-3"></div>
+  </div>
+
+  <div class="auth-container">
+
+    <!-- ══ Left — Brand Panel ══ -->
+    <section class="brand-panel">
+      <div class="brand-content">
+
+        <!-- Logo tile -->
+        <div class="brand-mark">
+          <span class="material-icons">chat_bubble</span>
+        </div>
+
+        <!-- Pill badge -->
+        <span class="brand-kicker">
+          <span class="material-icons" style="font-size:13px">bolt</span>
+          Next-Gen Communication
+        </span>
+
+        <!-- App name -->
+        <h1>NexTalk</h1>
+
+        <p>Seamless real-time messaging, beautiful dark mode, and instant media sharing — all in one premium platform.</p>
+
+        <!-- Feature chips -->
+        <div class="brand-features">
+          <span class="feature-pill">
+            <span class="material-icons">lock</span>
+            End-to-End Encrypted
+          </span>
+          <span class="feature-pill">
+            <span class="material-icons">bolt</span>
+            Real-Time Messaging
+          </span>
+          <span class="feature-pill">
+            <span class="material-icons">photo_library</span>
+            Instant Media Sharing
+          </span>
+          <span class="feature-pill">
+            <span class="material-icons">dark_mode</span>
+            Dark Mode
+          </span>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ══ Right — Auth Panel ══ -->
+    <section class="auth-panel">
+      <div class="auth-card">
+
+        <!-- Header -->
+        <div class="auth-header">
+          <h2>
+            {{ mode() === 'login' ? 'Welcome back' :
+               mode() === 'register' ? 'Create account' :
+               mode() === 'forgot_password' ? 'Reset Password' :
+               mode() === 'verify_otp' ? 'Verify OTP' :
+               'New Password' }}
+          </h2>
+          <p>
+            {{ mode() === 'login' ? 'Enter your details to access your chats.' :
+               mode() === 'register' ? 'Join the conversation today.' :
+               mode() === 'forgot_password' ? 'Enter your email to receive an OTP.' :
+               mode() === 'verify_otp' ? 'Enter the 6-digit OTP sent to your email.' :
+               'Create and confirm your new password below.' }}
+          </p>
+        </div>
+
+        <!-- Login / Register toggle -->
+        @if (mode() === 'login' || mode() === 'register') {
+          <div class="mode-switch" role="tablist" aria-label="Authentication mode">
+            <button
+              id="login-tab"
+              type="button"
+              class="switch-btn"
+              [class.active]="mode() === 'login'"
+              (click)="switchMode('login')">
+              Login
+            </button>
+            <button
+              id="register-tab"
+              type="button"
+              class="switch-btn"
+              [class.active]="mode() === 'register'"
+              (click)="switchMode('register')">
+              Register
+            </button>
+            <div class="active-indicator" [class.right]="mode() === 'register'"></div>
+          </div>
+        }
+
+        <!-- Form -->
+        <form id="auth-form" class="auth-form" (ngSubmit)="mode() === 'forgot_password' ? submitForgotPassword() : mode() === 'verify_otp' ? submitVerifyOtp() : mode() === 'reset_password' ? submitResetPassword() : submit()">
+
+          <!-- ONLY LOGIN/REGISTER -->
+          @if (mode() === 'login' || mode() === 'register') {
+            @if (mode() === 'register') {
+              <div class="input-group slide-down">
+                <label for="name">Full Name</label>
+                <div class="input-wrapper">
+                  <input
+                    id="name"
+                    name="name"
+                    [(ngModel)]="name"
+                    required
+                    maxlength="120"
+                    autocomplete="name"
+                    placeholder="John Doe">
+                  <span class="material-icons input-icon">person_outline</span>
+                </div>
+              </div>
+            }
+
+            <div class="input-group">
+              <label for="email">Email Address</label>
+              <div class="input-wrapper" [class.field-error]="emailError()">
+                <input
+                  id="email"
+                  name="email"
+                  [(ngModel)]="email"
+                  required
+                  type="email"
+                  autocomplete="email"
+                  placeholder="john@example.com">
+                <span class="material-icons input-icon">mail_outline</span>
+              </div>
+              @if (emailError()) {
+                <div class="error-hint" role="alert">
+                  <span class="material-icons">error</span>
+                  <span>{{ emailError() }}</span>
+                </div>
+              }
+            </div>
+
+            <div class="input-group">
+              <label for="password">Password
+                @if (mode() === 'register') {
+                  <span class="password-hint-label">Min 8 chars • A–Z • a–z • 0–9 • special</span>
+                }
+              </label>
+              <div class="input-wrapper" [class.field-error]="passwordError()">
+                <input
+                  id="password"
+                  name="password"
+                  [(ngModel)]="password"
+                  required
+                  [type]="showPassword() ? 'text' : 'password'"
+                  autocomplete="current-password"
+                  placeholder="Enter your password">
+                <span class="material-icons input-icon">lock_outline</span>
+                <button type="button" class="password-toggle" (click)="togglePasswordVisibility()" aria-label="Toggle password visibility" tabindex="-1">
+                  <span class="material-icons">{{ showPassword() ? 'visibility_off' : 'visibility' }}</span>
+                </button>
+              </div>
+              @if (passwordError()) {
+                <div class="error-hint" role="alert">
+                  <span class="material-icons">error</span>
+                  <span>{{ passwordError() }}</span>
+                </div>
+              }
+            </div>
+            
+            @if (mode() === 'login') {
+              <div class="forgot-password-link">
+                <a href="javascript:void(0)" (click)="switchMode('forgot_password')">Forgot password?</a>
+              </div>
+            }
+          }
+
+          <!-- ONLY FORGOT PASSWORD (EMAIL) -->
+          @if (mode() === 'forgot_password') {
+            <div class="input-group slide-down">
+              <label for="forgot-email">Account Email</label>
+              <div class="input-wrapper" [class.field-error]="emailError()">
+                <input
+                  id="forgot-email"
+                  name="forgot-email"
+                  [(ngModel)]="email"
+                  required
+                  type="email"
+                  autocomplete="email"
+                  placeholder="john@example.com">
+                <span class="material-icons input-icon">mail_outline</span>
+              </div>
+              @if (emailError()) {
+                <div class="error-hint" role="alert">
+                  <span class="material-icons">error</span>
+                  <span>{{ emailError() }}</span>
+                </div>
+              }
+            </div>
+          }
+
+          <!-- ONLY VERIFY OTP -->
+          @if (mode() === 'verify_otp') {
+            <div class="input-group slide-down">
+              <label for="otp">6-Digit OTP</label>
+              <div class="input-wrapper">
+                <input
+                  id="otp"
+                  name="otp"
+                  [(ngModel)]="otp"
+                  required
+                  type="text"
+                  maxlength="6"
+                  autocomplete="one-time-code"
+                  placeholder="Enter OTP (e.g. 123456)">
+                <span class="material-icons input-icon">password</span>
+              </div>
+            </div>
+          }
+
+          <!-- ONLY RESET PASSWORD -->
+          @if (mode() === 'reset_password') {
+            <div class="input-group slide-down">
+              <label for="new-password">New Password</label>
+              <div class="input-wrapper" [class.field-error]="passwordError()">
+                <input
+                  id="new-password"
+                  name="new-password"
+                  [(ngModel)]="password"
+                  required
+                  [type]="showPassword() ? 'text' : 'password'"
+                  placeholder="Enter new password">
+                <span class="material-icons input-icon">lock_outline</span>
+                <button type="button" class="password-toggle" (click)="togglePasswordVisibility()" aria-label="Toggle password visibility" tabindex="-1">
+                  <span class="material-icons">{{ showPassword() ? 'visibility_off' : 'visibility' }}</span>
+                </button>
+              </div>
+              @if (passwordError()) {
+                <div class="error-hint" role="alert">
+                  <span class="material-icons">error</span>
+                  <span>{{ passwordError() }}</span>
+                </div>
+              }
+            </div>
+
+            <div class="input-group slide-down">
+              <label for="confirm-password">Confirm Password</label>
+              <div class="input-wrapper">
+                <input
+                  id="confirm-password"
+                  name="confirm-password"
+                  [(ngModel)]="confirmPassword"
+                  required
+                  [type]="showConfirmPassword() ? 'text' : 'password'"
+                  placeholder="Confirm new password">
+                <span class="material-icons input-icon">lock_outline</span>
+                <button type="button" class="password-toggle" (click)="toggleConfirmPasswordVisibility()" aria-label="Toggle password visibility" tabindex="-1">
+                  <span class="material-icons">{{ showConfirmPassword() ? 'visibility_off' : 'visibility' }}</span>
+                </button>
+              </div>
+            </div>
+          }
+
+          @if (error()) {
+            <div class="error-banner" role="alert" [class.success]="error().includes('successfully')">
+              <span class="material-icons">{{ error().includes('successfully') ? 'check_circle_outline' : 'error_outline' }}</span>
+              <p>{{ error() }}</p>
+            </div>
+          }
+
+          <button
+            id="submit-btn"
+            class="primary-button"
+            type="submit"
+            [disabled]="loading()">
+            @if (loading()) {
+              <span class="spinner"></span>
+              <span>Processing…</span>
+            } @else {
+              <span>
+                {{ mode() === 'login' ? 'Sign In' : 
+                   mode() === 'register' ? 'Sign Up' : 
+                   mode() === 'forgot_password' ? 'Send OTP' :
+                   mode() === 'verify_otp' ? 'Verify OTP' :
+                   'Update Password' }}
+              </span>
+              <span class="material-icons arrow-icon">arrow_forward</span>
+            }
+          </button>
+
+          @if (mode() === 'login' || mode() === 'register') {
+            <div class="divider">
+              <span>or</span>
+            </div>
+
+            <div class="google-auth-container">
+              <div class="google-btn-wrapper">
+                <asl-google-signin-button theme="filled_black" type="standard" size="large" [width]="googleButtonWidth()" shape="rectangular" text="signin_with"></asl-google-signin-button>
+              </div>
+            </div>
+          }
+
+          @if (mode() !== 'login' && mode() !== 'register') {
+            <div class="back-to-login">
+              <a href="javascript:void(0)" (click)="switchMode('login')">
+                <span class="material-icons">arrow_back</span> Back to Login
+              </a>
+            </div>
+          }
+
+        </form>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- ══ Footer ══ -->
+  <footer class="auth-footer">
+    <div class="footer-content">
+      <div class="footer-links">
+        <a href="javascript:void(0)">Terms of Service</a>
+        <a href="javascript:void(0)">Privacy Policy</a>
+        <a href="javascript:void(0)">Security</a>
+        <a href="javascript:void(0)">Contact Us</a>
+      </div>
+      <p>&copy; 2026 NexTalk Inc. All rights reserved.</p>
+    </div>
+  </footer>
+
+</main>
