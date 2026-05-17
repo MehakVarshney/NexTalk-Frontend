@@ -1,6 +1,6 @@
 {
   "buildCommand": "npm run build:prod",
-  "outputDirectory": "dist/nextalk-frontend",
+  "outputDirectory": "dist/nextalk-frontend/browser",
   "framework": null,
   "rewrites": [
     {
