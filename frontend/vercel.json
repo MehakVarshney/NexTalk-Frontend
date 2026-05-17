@@ -1,5 +1,5 @@
 {
-  "buildCommand": "ng build --configuration production",
+  "buildCommand": "npm run build:prod",
   "outputDirectory": "dist/nextalk-frontend",
   "framework": null,
   "rewrites": [
